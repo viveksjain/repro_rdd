@@ -16,8 +16,8 @@ cp slaves "$SPARK_HOME/conf/slaves"
 # Master stuff
 if [ -f ~/scripts/is_master ]; then
   set -x
-  "$HADOOP_INSTALL/bin/start-dfs.sh"
-  "$HADOOP_INSTALL/bin/start-yarn.sh"
+  "$HADOOP_INSTALL/sbin/start-dfs.sh"
+  "$HADOOP_INSTALL/sbin/start-yarn.sh"
   "$HADOOP_INSTALL/bin/hdfs namenode" -format -force
   "$SPARK_HOME/sbin/start-all.sh"
 
