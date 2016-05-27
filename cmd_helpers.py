@@ -3,6 +3,8 @@ import subprocess
 import sys
 import os
 
+SSH_BATCH_SIZE = 10
+
 # Sets working directory to parent of f
 def set_cwd(f):
   abspath = os.path.abspath(f)
@@ -36,21 +38,46 @@ def abort():
 def run(cmd, msg=None):
   if msg:
     highlight(msg)
-  try:
-    print ' '.join(cmd)
-    subprocess.check_call(cmd)
-  except subprocess.CalledProcessError:
-    print >> sys.stderr, 'Error running ' + repr(cmd) + '\n\nStack trace:'
-    raise
+  print ' '.join(cmd)
+  subprocess.check_call(cmd)
 
 def ssh(host, cmd):
   # For simplicity, we include private key as part of repo - probably not a best
   # practice, but we want this to be as easy to run as possible.
-  run(['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-i', 'id_rsa', 'ubuntu@' + host, cmd])
+  run(_ssh_command(host, cmd))
 
-def ssh_async(host, cmd):
-  ssh(host, 'nohup ' + cmd)
+def _ssh_command(host, cmd):
+  return ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-i', 'id_rsa', 'ubuntu@' + host, cmd]
 
 def rsync(host, dirpath, remotepath):
-  run(['rsync', '-az', '--delete', '-e', 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i id_rsa',
-      dirpath, 'ubuntu@%s:%s' % (host, remotepath)])
+  run(_rsync_command(host, dirpath, remotepath))
+
+def _rsync_command(host, dirpath, remotepath):
+  return ['rsync', '-az', '--delete', '-e',
+      'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i id_rsa',
+      dirpath, 'ubuntu@%s:%s' % (host, remotepath)]
+
+def run_all(hosts, cmdfunc):
+  i = 0
+  while True:
+    procs = []
+    for _ in range(SSH_BATCH_SIZE):
+      if i >= len(hosts):
+        break
+      cmd = cmdfunc(hosts[i])
+      p = subprocess.Popen(cmd)
+      p.cmd = cmd
+      procs.append(p)
+      i += 1
+
+    for i, ret in enumerate(map(lambda p: p.wait(), procs)):
+      if ret:
+        raise subprocess.CalledProcessError(ret, procs[i].cmd)
+    if i >= len(cmds):
+      return
+
+def ssh_all(hosts, cmd):
+  run_all(hosts, lambda h: _ssh_command(h, cmd))
+
+def rsync_all(hosts, dirpath, remotepath):
+  run_all(hosts, lambda h: _rsync_command(h, dirpath, remotepath))

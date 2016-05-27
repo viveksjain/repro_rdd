@@ -1,4 +1,3 @@
-from botocore.exceptions import ClientError
 from cmd_helpers import *
 import time
 import argparse
@@ -8,7 +7,7 @@ import os
 # TODO make public
 AMI_IMAGE_ID = 'ami-31916851'
 SEC_GROUP_NAME = 'repro_rdd_secgroup'
-INSTANCE_TYPE = 't2.small' # TODO 'm4.xlarge'
+INSTANCE_TYPE = 't2.micro' # TODO 'm4.xlarge'
 IS_AWS_RUNNING = False
 MASTER = None
 SLAVES = []
@@ -48,6 +47,7 @@ def import_boto3():
   globals()['boto3'] = __import__('boto3')
 
 def create_secgroup(ec2, name):
+  from botocore.exceptions import ClientError
   try:
     groups = list(ec2.security_groups.filter(GroupNames=[name]))
     if groups:
@@ -151,16 +151,13 @@ def setup_instances(ec2):
   with open('ec2/masters', 'w') as f:
     f.write(MASTER)
 
-  for host in SLAVES + [MASTER]:
-    print 'Setting up ' + host
-    rsync(host, 'ec2/.', '~/scripts')
-    if host == MASTER:
-      # Create an empty file that we use to identify which node is the master in
-      # the scripts.
-      ssh(MASTER, 'touch ~/scripts/is_master')
-    ssh(host, '~/scripts/run.sh')
+  highlight('Setting up machines')
+  rsync_all(SLAVES + [MASTER], 'ec2/', '~/scripts')
+  ssh_all(SLAVES, '~/scripts/run.sh')
+  ssh(MASTER, 'touch ~/scripts/is_master; ~/scripts/run.sh')
 
 def cleanup():
+  global IS_AWS_RUNNING
   IS_AWS_RUNNING = False # TODO
 
 if __name__ == '__main__':
