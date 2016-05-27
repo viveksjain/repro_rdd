@@ -10,7 +10,7 @@ object KMeansDataGenerator {
             System.exit(1)
         }
 
-        val sc = new SparkContext(args(0), "LRDataGenerator")
+        val sc = new SparkContext(args(0), "KMeansDataGenerator")
         val outfile = args(1)
         val numFeatures = args(2).toInt
         val numPartitions = args(3).toInt
