@@ -40,9 +40,7 @@ def import_boto3():
   except ImportError:
     if not confirm('boto3 not installed. Do you want me to try and install it?'):
       abort()
-    if subprocess.call(['pip', 'install', 'boto3']):
-      highlight('pip install failed, retrying with sudo')
-      run(['sudo', 'pip', 'install', 'boto3'])
+    run(['pip', 'install', '--user', 'boto3'])
     import boto3
   globals()['boto3'] = __import__('boto3')
 
