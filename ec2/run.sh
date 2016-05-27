@@ -16,13 +16,13 @@ cp slaves "$SPARK_HOME/conf/slaves"
 # Master stuff
 if [ -f ~/scripts/is_master ]; then
   set -x
-  start-dfs.sh
-  start-yarn.sh
-  hdfs namenode -format -force
+  "$HADOOP_INSTALL/bin/start-dfs.sh"
+  "$HADOOP_INSTALL/bin/start-yarn.sh"
+  "$HADOOP_INSTALL/bin/hdfs namenode" -format -force
   "$SPARK_HOME/sbin/start-all.sh"
 
   SPARK_MASTER=spark://`hostname`:7077
-  spark-submit \
+  "$SPARK_HOME/bin/spark-submit" \
     --master $SPARK_MASTER \
     --class org.apache.spark.examples.SparkPi \
     --num-executors 10 \
