@@ -5,12 +5,16 @@ import scala.util.Random
 
 object LRDataGenerator {
     def main(args: Array[String]) {
-        val recordsPerPartition = 10
-        val numPartitions = 3
-        val numFeatures = 9
-        val outfile = "lr_data"
-        val conf = new SparkConf().setAppName("Logistic Regression")
-        val sc = new SparkContext(conf)
+        if (args.length < 5) {
+            System.err.println("Usage: LRDataGenerator <master> <file> <numFeatures> <numPartitions> <recordsPerPartition>")
+            System.exit(1)
+        }
+
+        val sc = new SparkContext(args(0), "LRDataGenerator")
+        val outfile = args(1)
+        val numFeatures = args(2).toInt
+        val numPartitions = args(3).toInt
+        val recordsPerPartition = args(4).toInt
 
         val distData = sc.parallelize(Seq[Array[Double]](), numPartitions)
             .mapPartitions { _ => {

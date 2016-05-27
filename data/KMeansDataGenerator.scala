@@ -5,17 +5,21 @@ import scala.util.Random
 
 object KMeansDataGenerator {
     def main(args: Array[String]) {
-        val recordsPerPartition = 10
-        val numPartitions = 3
-        val numFeatures = 9
-        val outfile = "kmeans_data"
-        val conf = new SparkConf().setAppName("K Means")
-        val sc = new SparkContext(conf)
+        if (args.length < 5) {
+            System.err.println("Usage: KMeansDataGenerator <master> <file> <numFeatures> <numPartitions> <recordsPerPartition>")
+            System.exit(1)
+        }
+
+        val sc = new SparkContext(args(0), "LRDataGenerator")
+        val outfile = args(1)
+        val numFeatures = args(2).toInt
+        val numPartitions = args(3).toInt
+        val recordsPerPartition = args(4).toInt        
 
         val distData = sc.parallelize(Seq[Array[Double]](), numPartitions)
             .mapPartitions { _ => {
                 (1 to recordsPerPartition).map{_ =>
-                    Array.fill(numFeatures + 1){Random.nextDouble * 10}
+                    Array.fill(numFeatures){Random.nextDouble * 10}
                 }.iterator
             }}
         distData.map{ point =>
