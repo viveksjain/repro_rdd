@@ -65,15 +65,16 @@ def run_all(hosts, cmdfunc):
       if i >= len(hosts):
         break
       cmd = cmdfunc(hosts[i])
+      print ' '.join(cmd)
       p = subprocess.Popen(cmd)
       p.cmd = cmd
       procs.append(p)
       i += 1
 
-    for i, ret in enumerate(map(lambda p: p.wait(), procs)):
+    for j, ret in enumerate(map(lambda p: p.wait(), procs)):
       if ret:
-        raise subprocess.CalledProcessError(ret, procs[i].cmd)
-    if i >= len(cmds):
+        raise subprocess.CalledProcessError(ret, procs[j].cmd)
+    if i >= len(hosts):
       return
 
 def ssh_all(hosts, cmd):

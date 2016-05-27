@@ -5,7 +5,7 @@ import sys
 import os
 
 # TODO make public
-AMI_IMAGE_ID = 'ami-31916851'
+AMI_IMAGE_ID = 'ami-9c956cfc'
 SEC_GROUP_NAME = 'repro_rdd_secgroup'
 INSTANCE_TYPE = 't2.micro' # TODO 'm4.xlarge'
 IS_AWS_RUNNING = False
@@ -30,7 +30,7 @@ AWS recommends creating IAM users, but if you trust this script you can just use
 
   run(['chmod', '600', 'id_rsa'])
   create_secgroup(ec2, SEC_GROUP_NAME)
-  run_instances(ec2, 3)
+  run_instances(ec2, 3, args)
   setup_instances(ec2)
   cleanup()
 
@@ -63,7 +63,7 @@ def create_secgroup(ec2, name):
   secgroup.authorize_egress(IpPermissions=[dict(IpProtocol='tcp',
       IpRanges=[dict(CidrIp='0.0.0.0/0')], FromPort=0, ToPort=65535)])
 
-def run_instances(ec2, n, check_running=True):
+def run_instances(ec2, n, args, check_running=True):
   global MASTER, SLAVES, IS_AWS_RUNNING
   if check_running:
     running = list(ec2.instances.filter(
@@ -74,7 +74,7 @@ def run_instances(ec2, n, check_running=True):
         running = None
 
   if not running:
-    running = launch_and_wait_instances(ec2, n)
+    running = launch_and_wait_instances(ec2, n, args)
 
   IS_AWS_RUNNING = True
   master_id = None
@@ -90,7 +90,7 @@ def run_instances(ec2, n, check_running=True):
   SLAVES += slave_hosts
   highlight('Added slaves are %r' % slave_hosts)
 
-def launch_and_wait_instances(ec2, n):
+def launch_and_wait_instances(ec2, n, args):
   global IS_AWS_RUNNING
   if not confirm('About to launch %d instances. Proceed?' % n):
     sys.exit(1)
@@ -107,6 +107,17 @@ def launch_and_wait_instances(ec2, n):
     print '%d instances running' % len(running)
     if len(running) == len(instances):
       break
+
+  client = boto3.client('ec2', region_name='us-west-2',
+      aws_access_key_id=args.access_key, aws_secret_access_key=args.secret_key)
+  while True:
+    statuses = client.describe_instance_status()
+    for status in statuses:
+      if status['InstanceStatus']['Status'] != 'ok':
+        print 'Waiting for instances to finish initializing'
+        continue
+      break
+    time.sleep(10)
 
   highlight('All launched instances are running')
   return running
