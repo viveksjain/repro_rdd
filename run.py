@@ -110,12 +110,11 @@ def launch_and_wait_instances(ec2, n, args):
       aws_access_key_id=args.access_key, aws_secret_access_key=args.secret_key)
   while True:
     statuses = client.describe_instance_status()
-    for status in statuses['InstanceStatuses']:
-      if status['InstanceStatus']['Status'] != 'ok':
-        print 'Waiting for instances to finish initializing'
-        continue
+    if any([status['InstanceStatus']['Status'] != 'ok' for status in statuses['InstanceStatuses']]):
+      print 'Waiting for instances to finish initializing'
+      time.sleep(10)
+    else:
       break
-    time.sleep(10)
 
   highlight('All launched instances are running')
   return running
