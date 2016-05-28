@@ -2,3 +2,4 @@
 ec2/*.xml
 ec2/masters
 ec2/slaves
+ec2/mesos.conf
