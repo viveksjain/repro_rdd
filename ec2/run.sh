@@ -70,7 +70,7 @@ if [ -f ~/scripts/is_master ]; then
     target/scala-2.10/data-generator_2.10-1.0.jar \
       $SPARK_MASTER $HDFS/data/lr_data 10 3 10
 
-  TODO clear IO buffers before each
+  # TODO clear IO buffers before each
   # Run ML algorithms
   $SPARK_HOME/bin/spark-submit --class org.apache.spark.examples.SparkKMeans \
     --master $SPARK_MASTER \
