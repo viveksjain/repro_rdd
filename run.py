@@ -121,6 +121,30 @@ def launch_and_wait_instances(ec2, n, args):
   return running
 
 def setup_instances(ec2):
+  def write_core_site(fname, tmp_dir):
+    with open('ec2/core-site.xml', 'w') as f:
+      f.write("""<?xml version="1.0" encoding="UTF-8"?>
+  <configuration>
+   <property>
+    <name>hadoop.tmp.dir</name>
+    <value>%s</value>
+    <description>A base for other temporary directories.</description>
+   </property>
+
+   <property>
+    <name>fs.default.name</name>
+    <value>hdfs://%s:54310</value>
+    <description>The name of the default file system.  A URI whose
+    scheme and authority determine the FileSystem implementation.  The
+    uri's scheme determines the config property (fs.SCHEME.impl) naming
+    the FileSystem implementation class.  The uri's authority is used to
+    determine the host, port, etc. for a filesystem.</description>
+   </property>
+  </configuration>
+  """ % (tmp_dir, MASTER))
+  write_core_site('ec2/core-site.xml', '/home/ubuntu/hadoop_temp')
+  write_core_site('ec2/core-site2.xml', '/home/ubuntu/hadoop_temp2')
+
   with open('ec2/mapred-site.xml', 'w') as f:
     f.write("""<?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -135,30 +159,12 @@ def setup_instances(ec2):
  </property>
 </configuration>
 """ % MASTER)
-  with open('ec2/core-site.xml', 'w') as f:
-    f.write("""<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
- <property>
-  <name>hadoop.tmp.dir</name>
-  <value>/home/ubuntu/hadoop_temp</value>
-  <description>A base for other temporary directories.</description>
- </property>
-
- <property>
-  <name>fs.default.name</name>
-  <value>hdfs://%s:54310</value>
-  <description>The name of the default file system.  A URI whose
-  scheme and authority determine the FileSystem implementation.  The
-  uri's scheme determines the config property (fs.SCHEME.impl) naming
-  the FileSystem implementation class.  The uri's authority is used to
-  determine the host, port, etc. for a filesystem.</description>
- </property>
-</configuration>
-""" % MASTER)
   with open('ec2/slaves', 'w') as f:
     f.write('\n'.join(SLAVES))
   with open('ec2/masters', 'w') as f:
     f.write(MASTER)
+  with open('ec2/mesos.conf', 'w') as f:
+    f.write('master=%s:5050' % MASTER)
 
   highlight('Setting up machines')
   rsync_all(SLAVES + [MASTER], 'ec2/', '~/scripts')
@@ -176,4 +182,7 @@ if __name__ == '__main__':
     abort()
   finally:
     if IS_AWS_RUNNING:
-      error('It seems an error occurred! Instances are likely STILL RUNNING. If you want to terminate them, you should go to the AWS console at https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#Instances:sort=instanceState and terminate them manually.')
+      error('It seems an error occurred! Instances are likely STILL RUNNING. If '
+            'you want to terminate them, you should go to the AWS console at '
+            'https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#Instances:sort=instanceState '
+            'and terminate them manually.')
