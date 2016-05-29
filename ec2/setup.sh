@@ -15,6 +15,7 @@ cp spark-defaults.conf "$SPARK_HOME/conf/spark-defaults.conf"
 # Master stuff
 if [ -f ~/scripts/is_master ]; then
   set -x
+  mkdir -p timings/
   sbt package
   javac -classpath $HADOOP_INSTALL/share/hadoop/common/hadoop-common-2.7.2.jar:$HADOOP_INSTALL/share/hadoop/mapreduce/hadoop-mapreduce-client-core-2.7.2.jar LogisticRegression.java
   jar cf lr.jar LogisticRegression*.class
