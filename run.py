@@ -34,9 +34,6 @@ AWS recommends creating IAM users, but if you trust this script you can just use
   get_or_launch_instances(ec2, 25, args, check_existing=True)
   run_instances(ec2)
 
-  get_or_launch_instances(ec2, 50, args)
-  run_instances(ec2)
-
   get_or_launch_instances(ec2, 100, args)
   run_instances(ec2)
 
