@@ -6,7 +6,7 @@ import scala.util.Random
 object LRDataGenerator {
     def main(args: Array[String]) {
         if (args.length < 5) {
-            System.err.println("Usage: LRDataGenerator <master> <file> <numFeatures> <numPartitions> <recordsPerPartition>")
+            System.err.println("Usage: LRDataGenerator <master> <file> <numFeatures> <numPartitions> <records>")
             System.exit(1)
         }
 
@@ -14,12 +14,12 @@ object LRDataGenerator {
         val outfile = args(1)
         val numFeatures = args(2).toInt
         val numPartitions = args(3).toInt
-        val recordsPerPartition = args(4).toInt
+        val recordsPerPartition = args(4).toInt / numPartitions
 
         val distData = sc.parallelize(Seq[Array[Double]](), numPartitions)
             .mapPartitions { _ => {
                 (1 to recordsPerPartition).map{_ =>
-                    var arr: Array[Double] = Array.fill(numFeatures + 1){Random.nextDouble * 5}
+                    var arr: Array[Double] = Array.fill(numFeatures + 1){Random.nextDouble}
                     arr(0) = if (Random.nextBoolean) 1 else -1
                     arr
                 }.iterator

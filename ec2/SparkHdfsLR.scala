@@ -16,9 +16,9 @@
  */
 
 // scalastyle:off println
-package org.apache.spark.examples
 
 import java.util.Random
+import java.io._
 
 import scala.math.exp
 
@@ -60,24 +60,24 @@ object SparkHdfsLR {
 
   def main(args: Array[String]) {
 
-    if (args.length < 2) {
-      System.err.println("Usage: SparkHdfsLR <file> <iters>")
+    if (args.length < 3) {
+      System.err.println("Usage: SparkHdfsLR <master> <file> <iters>")
       System.exit(1)
     }
 
     showWarning()
 
-    val sparkConf = new SparkConf().setAppName("SparkHdfsLR")
-    val inputPath = args(0)
-    val conf = new Configuration()
-    val sc = new SparkContext(sparkConf)
-    val lines = sc.textFile(inputPath)
+    val sc = new SparkContext(args(0), "SparkHdfsLR")
+    val lines = sc.textFile(args(1))
     val points = lines.map(parsePoint).cache()
-    val ITERATIONS = args(1).toInt
+    val ITERATIONS = args(2).toInt
 
     // Initialize w to a random value
     var w = DenseVector.fill(D) {2 * rand.nextDouble - 1}
     println("Initial w: " + w)
+
+    val writer = new BufferedWriter(new FileWriter("timings/sparklr.txt"))
+    var startTime = System.nanoTime()
 
     for (i <- 1 to ITERATIONS) {
       println("On iteration " + i)
@@ -85,6 +85,12 @@ object SparkHdfsLR {
         p.x * (1 / (1 + exp(-p.y * (w.dot(p.x)))) - 1) * p.y
       }.reduce(_ + _)
       w -= gradient
+
+      val endTime = System.nanoTime()
+      val duration = (endTime - startTime)
+      startTime = endTime
+      println("Took " + duration + "ns")
+      writer.write(duration + "\n")
     }
 
     println("Final w: " + w)

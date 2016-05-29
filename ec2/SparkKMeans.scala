@@ -16,7 +16,8 @@
  */
 
 // scalastyle:off println
-package org.apache.spark.examples
+
+import java.io._
 
 import breeze.linalg.{squaredDistance, DenseVector, Vector}
 
@@ -59,19 +60,22 @@ object SparkKMeans {
 
   def main(args: Array[String]) {
 
-    if (args.length < 3) {
-      System.err.println("Usage: SparkKMeans <file> <k> <convergeDist>")
+    if (args.length < 4) {
+      System.err.println("Usage: SparkKMeans <master> <file> <k> <iters>")
       System.exit(1)
     }
 
     showWarning()
 
-    val sparkConf = new SparkConf().setAppName("SparkKMeans")
-    val sc = new SparkContext(sparkConf)
-    val lines = sc.textFile(args(0))
+    val sc = new SparkContext(args(0), "SparkKMeans")
+
+    val writer = new BufferedWriter(new FileWriter("timings/sparkkmeans.txt"))
+    var startTime = System.nanoTime()
+
+    val lines = sc.textFile(args(1))
     val data = lines.map(parseVector _).cache()
-    val K = args(1).toInt
-    val numIters = args(2).toInt
+    val K = args(2).toInt
+    val numIters = args(3).toInt
 
     val kPoints = data.takeSample(withReplacement = false, K, 42).toArray
     var tempDist = 1.0
@@ -93,6 +97,11 @@ object SparkKMeans {
         kPoints(newP._1) = newP._2
       }
       println("Finished iteration (delta = " + tempDist + ")")
+      val endTime = System.nanoTime()
+      val duration = (endTime - startTime)
+      startTime = endTime
+      println("Took " + duration + "ns")
+      writer.write(duration + "\n")
     }
 
     println("Final centers:")

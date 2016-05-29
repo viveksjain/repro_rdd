@@ -4,10 +4,9 @@ import argparse
 import sys
 import os
 
-# TODO make public
-AMI_IMAGE_ID = 'ami-9c956cfc'
+AMI_IMAGE_ID = 'ami-84c33ae4' # TODO make public
 SEC_GROUP_NAME = 'repro_rdd_secgroup'
-INSTANCE_TYPE = 't2.micro' # TODO 'm4.xlarge'
+INSTANCE_TYPE = 'm4.large' # TODO 'm4.xlarge'
 IS_AWS_RUNNING = False
 MASTER = None
 SLAVES = []
@@ -30,9 +29,11 @@ AWS recommends creating IAM users, but if you trust this script you can just use
 
   run(['chmod', '600', 'id_rsa'])
   create_secgroup(ec2, SEC_GROUP_NAME)
-  run_instances(ec2, 3, args)
-  setup_instances(ec2)
-  cleanup()
+  get_or_launch_instances(ec2, 5, args, check_existing=True)
+  run_instances(ec2)
+
+  get_or_launch_instances(ec2, 10, args)
+  run_instances(ec2)
 
 def import_boto3():
   try:
@@ -61,18 +62,18 @@ def create_secgroup(ec2, name):
   secgroup.authorize_egress(IpPermissions=[dict(IpProtocol='tcp',
       IpRanges=[dict(CidrIp='0.0.0.0/0')], FromPort=0, ToPort=65535)])
 
-def run_instances(ec2, n, args, check_running=True):
+def get_or_launch_instances(ec2, n, args, check_existing=False):
   global MASTER, SLAVES, IS_AWS_RUNNING
-  if check_running:
+  running = []
+  if check_existing:
     running = list(ec2.instances.filter(
           Filters=[{'Name': 'instance-state-name', 'Values': ['running']}]))
-    # TODO also check running >= n
     if running:
-      if not confirm('%d running instances found - do you want to try to use them instead of launching new instances?' % len(running)):
-        running = None
+      if not confirm('%d running instances found - do you want to use them? (They should have been instances launched by this script, otherwise it will not work.)' % len(running)):
+        running = []
 
-  if not running:
-    running = launch_and_wait_instances(ec2, n, args)
+  if len(running) < n:
+    running += launch_and_wait_instances(ec2, n - len(running), args)
 
   IS_AWS_RUNNING = True
   master_id = None
@@ -119,9 +120,9 @@ def launch_and_wait_instances(ec2, n, args):
   highlight('All launched instances are running')
   return running
 
-def setup_instances(ec2):
+def run_instances(ec2):
   def write_core_site(fname, tmp_dir):
-    with open('ec2/core-site.xml', 'w') as f:
+    with open(fname, 'w') as f:
       f.write("""<?xml version="1.0" encoding="UTF-8"?>
   <configuration>
    <property>
@@ -142,7 +143,6 @@ def setup_instances(ec2):
   </configuration>
   """ % (tmp_dir, MASTER))
   write_core_site('ec2/core-site.xml', '/home/ubuntu/hadoop_temp')
-  write_core_site('ec2/core-site2.xml', '/home/ubuntu/hadoop_temp2')
 
   with open('ec2/mapred-site.xml', 'w') as f:
     f.write("""<?xml version="1.0"?>
@@ -162,13 +162,33 @@ def setup_instances(ec2):
     f.write('\n'.join(SLAVES))
   with open('ec2/masters', 'w') as f:
     f.write(MASTER)
-  with open('ec2/mesos.conf', 'w') as f:
-    f.write('master=%s:5050' % MASTER)
 
   highlight('Setting up machines')
-  rsync_all(SLAVES + [MASTER], 'ec2/', '~/scripts')
-  ssh_all(SLAVES, '~/scripts/run.sh')
-  ssh(MASTER, 'touch ~/scripts/is_master; ~/scripts/run.sh')
+  all_nodes = SLAVES + [MASTER]
+  rsync_all(all_nodes, 'ec2/', '~/scripts')
+  ssh_all(SLAVES, '~/scripts/setup.sh')
+  ssh(MASTER, 'touch ~/scripts/is_master; ~/scripts/setup.sh')
+
+  highlight('Generating data')
+  ssh(MASTER, '~/scripts/gen_data.sh %d' % len(SLAVES))
+  # Clear buffer caches
+  ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
+
+  highlight('Running experiments')
+  ssh(MASTER, '~/scripts/run_hadoopkmeans.sh')
+  ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
+  ssh(MASTER, '~/scripts/run_hadooplr.sh')
+  ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
+  ssh(MASTER, '~/scripts/run_sparkkmeans.sh')
+  ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
+  ssh(MASTER, '~/scripts/run_sparklr.sh')
+
+  highlight('Copying timing data')
+  rsync_reverse(MASTER, '~/scripts/timings/', 'ec2/timings%d_%d' % (len(all_nodes), int(time.time())))
+
+  highlight('Cleaning up')
+  ssh(MASTER, '~/scripts/stop.sh')
+  ssh_all(all_nodes, 'rm -r ~/hadoop_temp')
 
 def cleanup():
   global IS_AWS_RUNNING

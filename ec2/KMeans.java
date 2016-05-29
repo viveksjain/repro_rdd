@@ -15,7 +15,7 @@ public class KMeans {
     public static final String HDFS_OUTPUT = "/output/";
     public static final String HDFS_INPUT = "/data/kmeans_data/part-00000";
     public static final String JOB_NAME = "KMeans";
-    public static final String TIMING_FILE = "timings/kmeans.txt";
+    public static final String TIMING_FILE = "timings/hadoopkmeans.txt";
     public static final int N_ITERATIONS = 10;
     public static final int DIM = 10;
     public static final int N_CENTROIDS = 10;

@@ -50,12 +50,15 @@ def _ssh_command(host, cmd):
   return ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-i', 'id_rsa', 'ubuntu@' + host, cmd]
 
 def rsync(host, dirpath, remotepath):
-  run(_rsync_command(host, dirpath, remotepath))
+  run(_rsync_command(host, dirpath, 'ubuntu@%s:%s' % (host, remotepath)))
 
-def _rsync_command(host, dirpath, remotepath):
+def rsync_reverse(host, remotepath, dirpath):
+  run(_rsync_command(host, 'ubuntu@%s:%s' % (host, remotepath), dirpath))
+
+def _rsync_command(frompath, topath):
   return ['rsync', '-az', '--delete', '-e',
       'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i id_rsa',
-      dirpath, 'ubuntu@%s:%s' % (host, remotepath)]
+      frompath, topath]
 
 def run_all(hosts, cmdfunc):
   i = 0
@@ -81,4 +84,4 @@ def ssh_all(hosts, cmd):
   run_all(hosts, lambda h: _ssh_command(h, cmd))
 
 def rsync_all(hosts, dirpath, remotepath):
-  run_all(hosts, lambda h: _rsync_command(h, dirpath, remotepath))
+  run_all(hosts, lambda h: _rsync_command(h, dirpath, 'ubuntu@%s:%s' % (h, remotepath)))

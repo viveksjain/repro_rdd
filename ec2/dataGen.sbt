@@ -5,7 +5,6 @@ version := "1.0"
 scalaVersion := "2.10.6"
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "1.6.1"
-// libraryDependencies += "org.scalanlp" %% "breeze-math" % "0.4"
 
 libraryDependencies  ++= Seq(
   // other dependencies here
