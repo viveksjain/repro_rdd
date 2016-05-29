@@ -4,12 +4,14 @@ import argparse
 import sys
 import os
 
-AMI_IMAGE_ID = 'ami-84c33ae4' # TODO make public
+AMI_IMAGE_ID = 'ami-84c33ae4'
 SEC_GROUP_NAME = 'repro_rdd_secgroup'
-INSTANCE_TYPE = 'm4.large' # TODO 'm4.xlarge'
+INSTANCE_TYPE = 'm4.xlarge'
 IS_AWS_RUNNING = False
 MASTER = None
+MASTER_ID = None
 SLAVES = []
+SLAVE_IDS = []
 
 def main():
   parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -29,11 +31,16 @@ AWS recommends creating IAM users, but if you trust this script you can just use
 
   run(['chmod', '600', 'id_rsa'])
   create_secgroup(ec2, SEC_GROUP_NAME)
-  get_or_launch_instances(ec2, 5, args, check_existing=True)
+  get_or_launch_instances(ec2, 25, args, check_existing=True)
   run_instances(ec2)
 
-  get_or_launch_instances(ec2, 10, args)
+  get_or_launch_instances(ec2, 50, args)
   run_instances(ec2)
+
+  get_or_launch_instances(ec2, 100, args)
+  run_instances(ec2)
+
+  terminate(ec2)
 
 def import_boto3():
   try:
@@ -63,28 +70,29 @@ def create_secgroup(ec2, name):
       IpRanges=[dict(CidrIp='0.0.0.0/0')], FromPort=0, ToPort=65535)])
 
 def get_or_launch_instances(ec2, n, args, check_existing=False):
-  global MASTER, SLAVES, IS_AWS_RUNNING
+  global MASTER, MASTER_ID, SLAVES, SLAVE_IDS, IS_AWS_RUNNING
   running = []
   if check_existing:
     running = list(ec2.instances.filter(
           Filters=[{'Name': 'instance-state-name', 'Values': ['running']}]))
     if running:
-      if not confirm('%d running instances found - do you want to use them? (They should have been instances launched by this script, otherwise it will not work.)' % len(running)):
+      if not confirm('%d running instances found - do you want to use them? (If these instances have not been launched by this script, you should say "n".)' % len(running)):
         running = []
 
   if len(running) < n:
     running += launch_and_wait_instances(ec2, n - len(running), args)
 
   IS_AWS_RUNNING = True
-  master_id = None
+  MASTER_ID = None
   if not MASTER:
-    master_id = running[0].id
-    MASTER = list(ec2.instances.filter(InstanceIds=[master_id]))[0].public_dns_name
-    ec2.create_tags(Resources=[master_id], Tags=[dict(Key='Name', Value='repro_rdd master')])
+    MASTER_ID = running[0].id
+    MASTER = list(ec2.instances.filter(InstanceIds=[MASTER_ID]))[0].public_dns_name
+    ec2.create_tags(Resources=[MASTER_ID], Tags=[dict(Key='Name', Value='repro_rdd master')])
     highlight('Master is ' + MASTER)
 
-  slave_instances = filter(lambda i: i.id != master_id, running)
+  slave_instances = filter(lambda i: i.id != MASTER_ID, running)
   ec2.create_tags(Resources=[instance.id for instance in slave_instances], Tags=[dict(Key='Name', Value='repro_rdd')])
+  SLAVE_IDS += [instance.id for instance in slave_instances]
   slave_hosts = [instance.public_dns_name for instance in slave_instances]
   SLAVES += slave_hosts
   highlight('Added slaves are %r' % slave_hosts)
@@ -113,7 +121,7 @@ def launch_and_wait_instances(ec2, n, args):
     statuses = client.describe_instance_status()
     if any([status['InstanceStatus']['Status'] != 'ok' for status in statuses['InstanceStatuses']]):
       print 'Waiting for instances to finish initializing'
-      time.sleep(10)
+      time.sleep(30)
     else:
       break
 
@@ -175,23 +183,25 @@ def run_instances(ec2):
   ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
 
   highlight('Running experiments')
-  ssh(MASTER, '~/scripts/run_hadoopkmeans.sh')
-  ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
+  # ssh(MASTER, '~/scripts/run_hadoopkmeans.sh')
+  # ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
   ssh(MASTER, '~/scripts/run_hadooplr.sh')
   ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
-  ssh(MASTER, '~/scripts/run_sparkkmeans.sh')
-  ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
+  # ssh(MASTER, '~/scripts/run_sparkkmeans.sh')
+  # ssh_all(all_nodes, 'sync; echo 3 | sudo tee /proc/sys/vm/drop_caches')
   ssh(MASTER, '~/scripts/run_sparklr.sh')
 
   highlight('Copying timing data')
-  rsync_reverse(MASTER, '~/scripts/timings/', 'ec2/timings%d_%d' % (len(all_nodes), int(time.time())))
+  rsync_reverse(MASTER, '~/scripts/timings/', 'timings/%d' % len(all_nodes))
 
   highlight('Cleaning up')
   ssh(MASTER, '~/scripts/stop.sh')
   ssh_all(all_nodes, 'rm -r ~/hadoop_temp')
 
-def cleanup():
+def terminate(ec2):
   global IS_AWS_RUNNING
+  highlight('Terminating instances')
+  ec2.instances.filter(InstanceIds=([MASTER_ID] + SLAVE_IDS))
   IS_AWS_RUNNING = False # TODO
 
 if __name__ == '__main__':

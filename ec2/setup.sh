@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Script to run on EC2 nodes.
+source ~/scripts/common.sh
 
 set -e
 
-cd "$(dirname "$0")"
 cp mapred-site.xml "$HADOOP_CONF_DIR/mapred-site.xml"
 cp core-site.xml "$HADOOP_CONF_DIR/core-site.xml"
 cp masters "$HADOOP_CONF_DIR/masters"
 cp slaves "$HADOOP_CONF_DIR/slaves"
 
 cp slaves "$SPARK_HOME/conf/slaves"
+cp spark-defaults.conf "$SPARK_HOME/conf/spark-defaults.conf"
 
 # Master stuff
 if [ -f ~/scripts/is_master ]; then

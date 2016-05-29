@@ -104,6 +104,7 @@ object SparkKMeans {
       writer.write(duration + "\n")
     }
 
+    writer.close()
     println("Final centers:")
     kPoints.foreach(println)
     sc.stop()

@@ -93,6 +93,7 @@ object SparkHdfsLR {
       writer.write(duration + "\n")
     }
 
+    writer.close()
     println("Final w: " + w)
     sc.stop()
   }

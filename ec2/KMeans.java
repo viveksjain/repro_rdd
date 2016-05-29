@@ -12,8 +12,8 @@ import org.apache.hadoop.mapred.Reducer;
 
 @SuppressWarnings("deprecation")
 public class KMeans {
-    public static final String HDFS_OUTPUT = "/output/";
-    public static final String HDFS_INPUT = "/data/kmeans_data/part-00000";
+    public static final String HDFS_OUTPUT = "/output/kmeans/";
+    public static final String HDFS_INPUT = "/data/kmeans_data";
     public static final String JOB_NAME = "KMeans";
     public static final String TIMING_FILE = "timings/hadoopkmeans.txt";
     public static final int N_ITERATIONS = 10;
@@ -149,7 +149,7 @@ public class KMeans {
     }
 
     public static class Reduce extends MapReduceBase implements
-            Reducer<IntWritable, DoubleArrayWritable, DoubleArrayWritable, Text> {
+            Reducer<IntWritable, DoubleArrayWritable, DoubleArrayWritable, NullWritable> {
 
         /*
          * Reduce function will emit all the points to that center and calculate
@@ -157,10 +157,9 @@ public class KMeans {
          */
         @Override
         public void reduce(IntWritable key, Iterator<DoubleArrayWritable> values,
-                OutputCollector<DoubleArrayWritable, Text> output, Reporter reporter)
+                OutputCollector<DoubleArrayWritable, NullWritable> output, Reporter reporter)
                 throws IOException {
             DoubleWritable[] newCenter = new DoubleWritable[DIM];
-            String points = "";
             double[] sums = new double[DIM];
             int valuesCount = 0;
             while (values.hasNext()) {
@@ -168,16 +167,14 @@ public class KMeans {
                 for (int i = 0; i < point.length; i++) {
                     double val = point[i].get();
                     sums[i] += val;
-                    points += val + " ";
                 }
-                points += "\n";
                 valuesCount++;
             }
             for (int i = 0; i < sums.length; i++) {
                 newCenter[i] = new DoubleWritable(sums[i] / valuesCount);
             }
 
-            output.collect(new DoubleArrayWritable(newCenter), new Text(points));
+            output.collect(new DoubleArrayWritable(newCenter), NullWritable.get());
         }
     }
 
@@ -204,7 +201,7 @@ public class KMeans {
             conf.setMapOutputKeyClass(IntWritable.class);
             conf.setMapOutputValueClass(DoubleArrayWritable.class);
             conf.setOutputKeyClass(DoubleArrayWritable.class);
-            conf.setOutputValueClass(Text.class);
+            conf.setOutputValueClass(NullWritable.class);
             conf.setMapperClass(Map.class);
             conf.setReducerClass(Reduce.class);
             conf.setInputFormat(TextInputFormat.class);

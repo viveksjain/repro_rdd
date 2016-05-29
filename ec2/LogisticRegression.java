@@ -10,8 +10,8 @@ import java.lang.Math;
 
 @SuppressWarnings("deprecation")
 public class LogisticRegression {
-  public static final String HDFS_OUTPUT = "/output/";
-  public static final String HDFS_INPUT = "/data/lr_data/part-00000";
+  public static final String HDFS_OUTPUT = "/output/lr/";
+  public static final String HDFS_INPUT = "/data/lr_data";
   public static final String JOB_NAME = "LogisticRegression";
   public static final String TIMING_FILE = "timings/hadooplr.txt";
   public static final int N_ITERATIONS = 10;
