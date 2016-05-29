@@ -192,6 +192,7 @@ def run_instances(ec2):
   ssh(MASTER, '~/scripts/run_sparklr.sh')
 
   highlight('Copying timing data')
+  run(['mkdir', '-p', 'timings/%d' % len(all_nodes)])
   rsync_reverse(MASTER, '~/scripts/timings/', 'timings/%d' % len(all_nodes))
 
   highlight('Cleaning up')
