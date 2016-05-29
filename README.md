@@ -2,5 +2,7 @@
 2. Clone our git repo by running `git clone https://github.com/viveksjain/repro_rdd.git`.
 3. Go to this page: https://console.aws.amazon.com/iam/home?region=us-west-2#security_credential, expand the section "Access Keys (Access Key ID and Secret Access Key)," click "Create New Access Key," and download the key file.
 4. From the repo directory, run `python run.py <AWSAccessKeyId> <AWSSecretKey>`. You can use `python run.py --help` for more info.
+5. Wait for the script to complete. The script will automatically download the timing data after it has been generated.
+6. Open the IPython notebook `plot.ipynb` inside the repo. You will need IPython, plotly and numpy packages installed. Running all the cells inside the notebook should regenerate the graphs using your data. 
 
 Let us know if you run into any issues!
