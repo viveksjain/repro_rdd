@@ -1,7 +1,6 @@
-On a Unix (Mac/Linux) machine, simply run the script with
-
-    python run.py YOUR_AWS_ACCESS_KEY YOUR_AWS_SECRET_KEY
-
-You can use `python run.py --help` for more info.
+1. By default Amazon only allows you to launch 20 instances at a time. To increase this limit, fill out the form at https://www.google.com/url?q=https%3A%2F%2Faws.amazon.com%2Fsupport%2FcreateCase%3Ftype%3Dservice_limit_increase%26serviceLimitIncreaseType%3Dec2-instances&sa=D&sntz=1&usg=AFQjCNGmEmjfKn7F85Z6QYgrH4Vf64e45A, and request 100 m4.xlarge instances in US West (Oregon). For the use case, write something like "For our class project, we want to reproduce the results of the Spark paper (Resilient Distributed Datasets). This will require us to run 100 on-demand xlarge instances." It takes at least a day for this request to be approved, so start early!
+2. Clone our git repo by running `git clone https://github.com/viveksjain/repro_rdd.git`.
+3. Go to this page: https://console.aws.amazon.com/iam/home?region=us-west-2#security_credential, expand the section "Access Keys (Access Key ID and Secret Access Key)," click "Create New Access Key," and download the key file.
+4. From the repo directory, run `python run.py <AWSAccessKeyId> <YOUR_AWS>`. You can use `python run.py --help` for more info.
 
 Let us know if you run into any issues!
